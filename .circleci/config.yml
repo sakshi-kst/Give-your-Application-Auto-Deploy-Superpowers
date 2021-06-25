@@ -150,7 +150,7 @@ jobs:
               --filters "Name=tag:project,Values=udacity-frontend-${CIRCLE_WORKFLOW_ID:0:7}" \
               --query 'Reservations[*].Instances[*].PublicIpAddress' \
               --output text)
-            echo "$BACKEND_IP" >> .circleci/ansible/inventory.txt
+            echo "$BACKEND_IP" >> ~/project/.circleci/ansible/inventory.txt
       - run: yum -y install tar gzip
       - persist_to_workspace:
           root: ~/
@@ -169,35 +169,102 @@ jobs:
           at: ~/
       - run:
           name: Install dependencies
-          #working_directory: project/.circleci/ansible
           command: |
             cd ~/project/.circleci/ansible
             apk add --update ansible
       - run:
           name: Configure server
-          #working_directory: project/.circleci/ansible
           command: |
             cd ~/project/.circleci/ansible
             ansible-playbook -i inventory.txt configure-server.yml
+      # Here's where you will add some code to rollback on failure
+      
+  run-migrations:
+    docker:
+      - image: circleci/node:13.8.0
+    steps:
+      - checkout
+      - run:
+          name: Run migrations
+          command: |
+            cd ~/project/backend
+            npm run migrations > migration_output
+      - run:
+          name: Send migration results to memstash
+          command: |
+            if grep "has been executed successfully" migration_output
+            then
+              curl -H "Content-Type: text/plain" -H "token: bccde535-099e-43c3-91d8-42e8b76b7f3e" --request PUT --data "Success" https://api.memstash.io/values/migration_${CIRCLE_WORKFLOW_ID}
+            else
+              curl -H "Content-Type: text/plain" -H "token: bccde535-099e-43c3-91d8-42e8b76b7f3e" --request PUT --data "Failure" https://api.memstash.io/values/migration_${CIRCLE_WORKFLOW_ID}
+            fi
+       # Here's where you will add some code to rollback on failure
+       
+  deploy-frontend:
+    docker:
+      - image: amazon/aws-cli
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            # your code here
+      - run:
+          name: Get backend url
+          command: |
+            BACKEND_IP = sed -n '2p' ~/project/.circleci/ansible/inventory.txt
+            export API_URL="http://${BACKEND_IP}:3030"
+            echo "${API_URL}"
+            npm run build
+      - run:
+          name: Deploy frontend objects
+          command: |
+            aws s3 cp ./dist "s3://udapeople-${CIRCLE_WORKFLOW_ID:0:7}" --recursive
+      # Here's where you will add some code to rollback on failure
+      
+  deploy-backend:
+    docker:
+      - image: python:3.7-alpine3.11
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints: ["4b:d5:bb:c9:99:a6:2f:91:e9:b0:24:6d:40:3b:4d:71"]
+      - attach_workspace:
+          at: ~/
+      - run:
+          name: Install dependencies
+          command: |
+            # your code here
+      - run:
+          name: Deploy backend
+          command: |
+            cd ~/project/.circleci/ansible
+            ansible-playbook -i inventory.txt deploy-backend.yaml
       # Here's where you will add some code to rollback on failure
 
 workflows:
   default:
     jobs:
-      #- build-frontend
-      #- build-backend
-      #- test-frontend:
-      #    requires: [build-frontend]
-      #- test-backend:
-      #    requires: [build-backend]
-      #- scan-backend:
-      #    requires: [build-backend]
-      #- scan-frontend:
-      #    requires: [build-frontend]
+      - build-frontend
+      - build-backend
+      - test-frontend:
+          requires: [build-frontend]
+      - test-backend:
+          requires: [build-backend]
+      - scan-backend:
+          requires: [build-backend]
+      - scan-frontend:
+          requires: [build-frontend]
       - deploy-infrastructure:
-          #requires: [test-frontend, test-backend, scan-frontend, scan-backend]
+          requires: [test-frontend, test-backend, scan-frontend, scan-backend]
           filters:
             branches:
               only: [master]
       - configure-infrastructure:
           requires: [deploy-infrastructure]
+      - run-migrations:
+          requires: [configure-infrastructure]
+      - deploy-frontend:
+          requires: [run-migrations]
+      - deploy-backend:
+          requires: [run-migrations]
