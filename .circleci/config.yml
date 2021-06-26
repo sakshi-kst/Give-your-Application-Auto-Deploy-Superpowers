@@ -147,11 +147,12 @@ jobs:
           name: Add back-end ip to ansible inventory
           command: |
             BACKEND_IP=$(aws ec2 describe-instances \
-              --filters "Name=tag:project,Values=udacity-frontend-${CIRCLE_WORKFLOW_ID:0:7}" \
+              --filters "Name=tag:project,Values=udacity-backend-${CIRCLE_WORKFLOW_ID:0:7}" \
               --query 'Reservations[*].Instances[*].PublicIpAddress' \
               --output text)
-            echo "$BACKEND_IP" >> ~/project/.circleci/ansible/inventory.txt
-            cat ~/project/.circleci/ansible/inventory.txt
+            echo "$BACKEND_IP" >> ~/project/.circleci/ansible/inventory
+            echo "$BACKEND_IP"
+            cat ~/project/.circleci/ansible/inventory
       - run: yum -y install tar gzip
       - persist_to_workspace:
           root: ~/
@@ -219,7 +220,7 @@ jobs:
       - run:
           name: Get backend url
           command: |
-            export BACKEND_IP = $(sed -n '2p' ~/project/.circleci/ansible/inventory.txt)
+            export BACKEND_IP=$(sed -n '2p' ~/project/.circleci/ansible/inventory.txt)
             export API_URL="http://${BACKEND_IP}:3030"
             echo "${API_URL}"
             npm run build
