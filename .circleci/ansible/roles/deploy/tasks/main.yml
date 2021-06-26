@@ -3,17 +3,14 @@
   - name: "Copy backend files"
     become: yes
     synchronize:
-      src: ~/backend/dist
-      dest: /home/ubuntu/udapeople
-      recursive: true
-
-  - name: "Copy node_modules"
-    become: yes
-    synchronize:
-      src: ../backend/node_modules
-      dest: /home/ubuntu/udapeople
+      src: /root/project/backend
+      dest: /home/ubuntu
       recursive: true
 
   - name: "Deploy code"
     become: true
-    command: pm2 start -f /home/ubuntu/udapeople/dist/main.js
+    shell: |
+    cd /home/ubuntu/backend
+    npm install
+    npm run build
+    pm2 start -f /home/ubuntu/backend/dist/main.js
