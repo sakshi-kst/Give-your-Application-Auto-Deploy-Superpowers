@@ -3,7 +3,7 @@
   - name: "Copy backend files"
     become: yes
     synchronize:
-      src: ../backend/dist
+      src: ../../backend/dist
       dest: /home/ubuntu/udapeople
       recursive: true
 
