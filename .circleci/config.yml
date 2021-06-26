@@ -209,7 +209,10 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-            sudo yum install -y nodejs npm
+            yum install -y gcc-c++ make
+            yum install sudo -y
+            curl -sL https://rpm.nodesource.com/setup_13.x | sudo -E bash - 
+            yum install -y nodejs
             cd ~/project/frontend
             npm install
       - run:
