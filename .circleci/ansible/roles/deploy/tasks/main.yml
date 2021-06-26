@@ -3,16 +3,16 @@
   - name: "Copy backend files"
     become: yes
     synchronize:
-      src: ~/project/backend/dist
+      src: ~/backend/dist
       dest: /home/ubuntu/udapeople
       recursive: true
 
-  #- name: "Copy node_modules"
-  #  become: yes
-  #  synchronize:
-  #    src: ~/project/backend/node_modules
-  #    dest: /home/ubuntu/udapeople
-  #    recursive: true
+  - name: "Copy node_modules"
+    become: yes
+    synchronize:
+      src: ../backend/node_modules
+      dest: /home/ubuntu/udapeople
+      recursive: true
 
   - name: "Deploy code"
     become: true
