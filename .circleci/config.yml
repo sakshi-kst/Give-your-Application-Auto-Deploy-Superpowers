@@ -20,12 +20,13 @@ commands:
           when: on_fail
           command: |
             SUCCESS=$(curl -H "token: bccde535-099e-43c3-91d8-42e8b76b7f3e" --request GET https://api.memstash.io/values/migration_${CIRCLE_WORKFLOW_ID})
-            if(( "$SUCCESS"=="Success" ))
+            echo $SUCCESS
+            if[["$SUCCESS"=="Success"]]
             then
               cd ~/project/backend
               npm install
               npm run migrations:revert
-            fi
+            fi 
             
 jobs:
   build-frontend:
@@ -191,8 +192,10 @@ jobs:
           command: |
             if grep "has been executed successfully" ~/project/backend/migration_output
             then
+              echo "Success"
               curl -H "Content-Type: text/plain" -H "token: bccde535-099e-43c3-91d8-42e8b76b7f3e" --request PUT --data "Success" https://api.memstash.io/values/migration_${CIRCLE_WORKFLOW_ID}
             else
+              echo "Failure"
               curl -H "Content-Type: text/plain" -H "token: bccde535-099e-43c3-91d8-42e8b76b7f3e" --request PUT --data "Failure" https://api.memstash.io/values/migration_${CIRCLE_WORKFLOW_ID}
             fi
       - destroy-environment
@@ -275,12 +278,38 @@ jobs:
           name: Frontend smoke test.
           command: |
             URL="http://udapeople-${CIRCLE_WORKFLOW_ID:0:7}.s3.us-east-2.amazonaws.com/index.html"
-            if curl -s ${URL} | grep "Welcome"
-            then
-              return 1
-            else
-              return 0
-            fi
+            curl -s ${URL} | grep "Welcome"
+            #if curl -s ${URL} | grep "Welcome"
+            #then
+            #  return 1
+            #else
+            #  return 0
+            #fi
+      - destroy-environment
+      - revert-migrations
+      
+  cloudfront-update:
+    docker:
+      - image: amazon/aws-cli
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            yum install -y curl tar gzip
+      - run:
+          name: Update cloudfront distribution
+          command: |
+            cd ~/project/.circleci/files
+            OldWorkflowID=$(aws cloudformation \
+              list-exports --query "Exports[?Name==\`WorkflowID\`].Value" \
+              --no-paginate --output text)
+            curl -H "Content-Type: text/plain" -H "token: bccde535-099e-43c3-91d8-42e8b76b7f3e" --request PUT --data "$OldWorkflowID" https://api.memstash.io/values/WorkflowID
+            aws cloudformation deploy \
+              --template-file cloudfront.yml \
+              --stack-name cloudfront-stack \
+              --parameter-overrides WorkflowID="${CIRCLE_WORKFLOW_ID:0:7}" \
+              --tags project=udapeople
       - destroy-environment
       - revert-migrations
 
@@ -312,3 +341,5 @@ workflows:
           requires: [run-migrations]
       - smoke-test:
           requires: [deploy-backend, deploy-frontend]
+      - cloudfront-update:
+          requires: [smoke-test]
