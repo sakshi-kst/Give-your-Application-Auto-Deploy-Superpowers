@@ -10,7 +10,7 @@
   - name: "Deploy code"
     become: true
     shell: |
-    cd /home/ubuntu/backend
-    npm install
-    npm run build
-    pm2 start -f /home/ubuntu/backend/dist/main.js
+      cd /home/ubuntu/backend
+      npm install
+      npm run build
+      pm2 start -f /home/ubuntu/backend/dist/main.js
