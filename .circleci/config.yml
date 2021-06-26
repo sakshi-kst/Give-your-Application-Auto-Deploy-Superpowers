@@ -218,7 +218,7 @@ jobs:
       - run:
           name: Get backend url
           command: |
-            BACKEND_IP = sed -n '2p' ~/project/.circleci/ansible/inventory.txt
+            BACKEND_IP = $(sed -n '2p' ~/project/.circleci/ansible/inventory.txt)
             export API_URL="http://${BACKEND_IP}:3030"
             echo "${API_URL}"
             npm run build
@@ -262,7 +262,7 @@ jobs:
       - run:
           name: Get backend url
           command: |
-            BACKEND_IP = sed -n '2p' ~/project/.circleci/ansible/inventory.txt
+            BACKEND_IP = $(sed -n '2p' ~/project/.circleci/ansible/inventory.txt)
       - run:
           name: Backend smoke test.
           command: |
@@ -271,24 +271,29 @@ jobs:
           name: Frontend smoke test.
           command: |
             URL="http://udapeople-${CIRCLE_WORKFLOW_ID:0:7}.s3-website.us-east-1.amazonaws.com/index.html"
-            curl -s ${URL} | grep "Welcome"
+            if curl -s ${URL} | grep "Welcome"
+            then
+              return 1
+            else
+              return 0
+            fi
       # Here's where you will add some code to rollback on failure
 
 workflows:
   default:
     jobs:
-      - build-frontend
-      - build-backend
-      - test-frontend:
-          requires: [build-frontend]
-      - test-backend:
-          requires: [build-backend]
-      - scan-backend:
-          requires: [build-backend]
-      - scan-frontend:
-          requires: [build-frontend]
+      #- build-frontend
+      #- build-backend
+      #- test-frontend:
+      #    requires: [build-frontend]
+      #- test-backend:
+      #    requires: [build-backend]
+      #- scan-backend:
+      #    requires: [build-backend]
+      #- scan-frontend:
+      #    requires: [build-frontend]
       - deploy-infrastructure:
-          requires: [test-frontend, test-backend, scan-frontend, scan-backend]
+      #    requires: [test-frontend, test-backend, scan-frontend, scan-backend]
           filters:
             branches:
               only: [master]
