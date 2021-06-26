@@ -328,9 +328,10 @@ jobs:
         - run:
             name: Remove old stacks and files
             command: |
+              echo "STACKS: ${STACKS}"
+              echo "OldWorkflowID: ${OldWorkflowID}"
               if [[ "${STACKS[@]}" =~ "${OldWorkflowID}" ]]
               then
-                echo "${OldWorkflowID}"
                 aws cloudformation delete-stack --stack-name backend-stack-${OldWorkflowID}
                 #aws s3 rm "s3://udapeople-${OldWorkflowID}" --recursive
                 aws cloudformation delete-stack --stack-name frontend-stack-${OldWorkflowID}
