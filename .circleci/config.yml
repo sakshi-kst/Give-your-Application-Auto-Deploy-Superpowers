@@ -102,6 +102,7 @@ jobs:
           name: Frontend scan for vulnerabilities
           command: |
             cd ~/project/frontend
+            npm install
             npm audit fix --audit-level=critical --force
 
   scan-backend:
